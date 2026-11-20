@@ -1,0 +1,9 @@
+# The code-structure rules' settings that tools/code_structure.py reads
+# (CONTRIBUTING.md, "Code structure"). Here it runs S4 only; S2, S5 and S10
+# are scripts/check-structure.mjs and scripts/check-licences.mjs.
+repository = "open-meridian/meridian-desktop"
+
+# S4: the version this repository is building. A marker INTERIM(vNN) at or
+# before it fails.
+roadmap_version = "v31a"
+interims_register = "tools/interims.tsv"

@@ -10,6 +10,10 @@ Each rule is enforced by its check in `npm run check` and in CI, and each check 
 
 - **S2 file size:** a new hand-written file stays under 1,500 lines. An existing one grows past that only with a
   `Size-Exception:` trailer.
+- **S4 interims name their end:** every stop-gap carries `INTERIM(vNN): reason`; `npm run check:interims` fails
+  on one due at `roadmap_version` (tools/code-structure.toml) and on a stale `tools/interims.tsv` (regenerate it with
+  `python3 tools/code_structure.py interims --write`). Moving a marker's version needs the product owner's word and
+  a trailer.
 - **S5 pins:** every dependency is pinned exactly, by version or full SHA. Never by a range, a branch or a sibling
   checkout.
 - **S10 licences:** only allowed licences ship, and the notices ship with them. No proprietary package (for example
