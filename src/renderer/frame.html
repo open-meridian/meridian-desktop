@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Window frame</title>
+<link rel="stylesheet" href="desk.css"></head>
+<body>
+<div class="row" id="row">
+  <div class="name" id="name"><span class="dot" aria-hidden="true"></span><span class="dep" id="dep"></span><span class="what" id="what"></span></div>
+  <div class="controls" role="group" aria-label="Window">
+    <button type="button" id="pin" data-act="pin" title="Keep on top" aria-pressed="false">Pin</button>
+    <button type="button" data-act="duplicate" title="Open this page in a new window">Duplicate</button>
+    <button type="button" data-act="reload" title="Reload">Reload</button>
+    <button type="button" data-act="minimize" title="Minimise" aria-label="Minimise">&#8211;</button>
+    <button type="button" data-act="maximize" title="Maximise" aria-label="Maximise">&#9633;</button>
+    <button type="button" data-act="close" title="Close" aria-label="Close">&#215;</button>
+  </div>
+</div>
+<div id="notice"></div>
+<script src="notice.js"></script>
+<script src="frame.js"></script>
+</body>
+</html>

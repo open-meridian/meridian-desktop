@@ -1,0 +1,8 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+build/notices/*
+!build/notices/README
+build/update-key/*
+!build/update-key/README

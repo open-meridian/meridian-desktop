@@ -1,0 +1,109 @@
+# A release, from a tag vX.Y.Z (spec requirement 14). It builds for macOS (both architectures), Windows and Linux
+# (AppImage), signs each file for the updater, and makes a draft GitHub release, once the `release` environment's
+# approval is given on GitHub.
+#
+# The signing identities and their secrets are the product owner's. With none set, the builds are unsigned and
+# the release job stops before publishing. What the workflow reads:
+#   secrets  CSC_LINK, CSC_KEY_PASSWORD           macOS Developer ID Application certificate (.p12, base64) and its password
+#            APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID   notarisation
+#            WIN_CSC_LINK, WIN_CSC_KEY_PASSWORD   Windows code-signing certificate (.pfx, base64) and its password
+#            UPDATE_SIGNING_KEY                   Ed25519 private key (PEM) the updater's signatures are made with
+#   variable UPDATE_PUBLIC_KEY                    its public key (PEM), built into the app
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "24.11.1"
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with: { node-version: "${{ env.NODE_VERSION }}" }
+      - run: npm ci
+      - name: The tag is the package's version
+        run: test "v$(node -p 'require("./package.json").version')" = "${GITHUB_REF_NAME}"
+      - name: Electron is a major Electron still supports
+        run: node scripts/check-electron-support.mjs
+      - run: node scripts/check-structure.mjs && node scripts/check-licences.mjs && npm test
+      - name: The updater's public key is set
+        env: { UPDATE_PUBLIC_KEY: "${{ vars.UPDATE_PUBLIC_KEY }}" }
+        run: |
+          [ -n "$UPDATE_PUBLIC_KEY" ] || { echo "the UPDATE_PUBLIC_KEY variable is not set: a release must carry it" >&2; exit 1; }
+
+  build:
+    needs: gate
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { os: ubuntu-24.04, flags: --linux }
+          - { os: windows-2025, flags: --win }
+          - { os: macos-15, flags: --mac }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      CSC_LINK: ${{ matrix.os == 'windows-2025' && secrets.WIN_CSC_LINK || secrets.CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ matrix.os == 'windows-2025' && secrets.WIN_CSC_KEY_PASSWORD || secrets.CSC_KEY_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      UPDATE_PUBLIC_KEY: ${{ vars.UPDATE_PUBLIC_KEY }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with: { node-version: "${{ env.NODE_VERSION }}" }
+      - run: npm ci
+      - name: Build (signed where the secrets are set)
+        shell: bash
+        run: |
+          printf '%s\n' "$UPDATE_PUBLIC_KEY" > build/update-key/update-key.pem
+          [ -n "$CSC_LINK" ] || export CSC_IDENTITY_AUTO_DISCOVERY=false
+          notarize=false
+          [ -n "$APPLE_ID" ] && [ -n "$CSC_LINK" ] && notarize=true
+          npm run notices
+          npx electron-builder ${{ matrix.flags }} --publish never -c.mac.notarize=$notarize
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-${{ matrix.os }}
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/*.exe
+            dist/*.AppImage
+            dist/*.blockmap
+            dist/latest*.yml
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with: { node-version: "${{ env.NODE_VERSION }}" }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { path: release, merge-multiple: true }
+      - name: Signed for the updater
+        env: { UPDATE_SIGNING_KEY: "${{ secrets.UPDATE_SIGNING_KEY }}" }
+        run: node scripts/sign-update.mjs release
+      - name: A draft release
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: gh release create "$GITHUB_REF_NAME" --draft --verify-tag --title "Meridian Desktop $GITHUB_REF_NAME" release/*

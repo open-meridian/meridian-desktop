@@ -1,0 +1,8 @@
+meridian-desktop
+Copyright 2026 Societal Lab Inc.
+
+Licensed under the GNU Affero General Public License, version 3 or later.
+See LICENSE.
+
+A release carries Electron (MIT), with Chromium's notices in LICENSES.chromium.html, and the packages listed with
+their notices in resources/notices/THIRD_PARTY_NOTICES.txt.

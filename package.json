@@ -1,0 +1,37 @@
+{
+  "name": "meridian-desktop",
+  "productName": "Meridian Desktop",
+  "version": "0.1.0",
+  "description": "Open Meridian's desktop application: a hardened browser with a trading desk's window manager.",
+  "license": "AGPL-3.0-or-later",
+  "author": "Societal Lab Inc.",
+  "homepage": "https://github.com/open-meridian/meridian-desktop",
+  "repository": "github:open-meridian/meridian-desktop",
+  "private": true,
+  "main": "src/main/main.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/unit/",
+    "check": "node scripts/check-structure.mjs && node scripts/check-licences.mjs && node --test test/unit/",
+    "check:electron": "node scripts/check-electron-support.mjs",
+    "notices": "node scripts/notices.mjs",
+    "test:browser": "playwright test --config test/browser/playwright.config.mjs",
+    "test:desktop": "playwright test --config test/e2e/playwright.config.mjs",
+    "pack": "npm run notices && electron-builder --publish never"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.11"
+  },
+  "devDependencies": {
+    "@electron/fuses": "2.1.3",
+    "@playwright/test": "1.65.1",
+    "electron": "45.4.1",
+    "electron-builder": "26.18.0"
+  },
+  "allowScripts": {
+    "electron-winstaller": false
+  }
+}
