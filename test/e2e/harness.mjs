@@ -48,6 +48,18 @@ export async function page(app, test, what) {
   return until(what || 'a page', () => app.context().pages().find((p) => { try { return test(p.url()); } catch { return false; } }));
 }
 
+// The plugin's page in a window on its area, framed on the plugin's own host. Under Manage the area opens on the
+// dashboard's own Summary, which frames nothing: the person picks one of the plugin's pages from the area's tabs,
+// and the window shows it without leaving the area.
+export async function pluginPage(area, instance, address) {
+  const host = `${instance}.plugins.${new URL(address).hostname}`;
+  const shows = await until(`${instance}'s page, or a tab for one, in ${area.url()}`, async () => (
+    await area.$('iframe[data-plugin-frame]') ? 'a page' : await area.$('nav a[data-page]') ? 'a tab' : null));
+  if (shows === 'a tab') await area.click('nav a[data-page]');
+  return until(`${instance}'s page on its own host`, () => area.frames().find((f) => f !== area.mainFrame() && f.url() && new URL(f.url()).hostname === host))
+    .catch(async (late) => { throw new Error(`${late.message}; the window is at ${area.url()} with frames ${JSON.stringify(area.frames().map((f) => f.url()))}`); });
+}
+
 export const strip = (app, kind = 'bar') => page(app, (u) => u === `app://desk/${kind === 'bar' ? 'bar' : 'frame'}.html`, `the ${kind} strip`);
 
 export async function signIn(view, person) {

@@ -1,5 +1,6 @@
 # L1's condition that memory stays flat over a one-hour soak: the desktop against a real deployment (as ci's
 # desktop-deployment job brings one up), every plugin open, sampled every 30 seconds. Weekly, and on demand.
+# The run says whether it passed and why, and nothing measured: it prints no figure and keeps no file of them.
 name: soak
 
 on:
@@ -60,6 +61,3 @@ jobs:
         run: |
           SOAK=1 DESKTOP_DEPLOYMENT=http://meridian.localhost DESKTOP_PERSON_FILE="$RUN_DIR/person.json" \
           DESKTOP_INSTANCES="$(cat "$RUN_DIR/instances")" xvfb-run -a npm run test:desktop -- soak.spec.mjs
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: always()
-        with: { name: soak, path: test-results/soak.json, if-no-files-found: ignore }

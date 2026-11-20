@@ -1,15 +1,24 @@
 // L1's condition: the desktop's memory stays flat over a one-hour soak. Every plugin the person may open is open
-// in a window, and each window's page is loaded again every ten minutes. The desktop's working set, summed over
-// all its processes, is sampled every 30 seconds into test-results/soak.json.
-// Flat means, against the mean of minutes 5 to 10 (the warm baseline):
-// - no sample in the last ten minutes above the baseline by more than 10%; and
-// - the least-squares trend from minute 10 on adding no more than 10% of the baseline over the hour.
-import { test, expect } from '@playwright/test';
+// in a window on one of the plugin's own pages (not the dashboard's Summary), and each of those windows is loaded
+// again every ten minutes. One more window, on the first plugin's page, is never loaded again: growth in a page
+// left alone shows there. The desktop's working set, summed over all its processes, and the runner's free memory
+// are sampled every 30 seconds.
+//
+// What flat means is test/e2e/soak-rule.mjs. This prints the pass or the fail and its reason, and nothing
+// measured: figures stay out of CI's output and out of any file a run keeps.
+import { test } from '@playwright/test';
 import fs from 'node:fs';
-import path from 'node:path';
-import { launch, profile, strip, page, signIn, deploymentA, windows, until, REPO } from './harness.mjs';
+import os from 'node:os';
+import { launch, profile, strip, page, pluginPage, signIn, deploymentA, until } from './harness.mjs';
+import { judge } from './soak-rule.mjs';
 
 const MINUTES = Number(process.env.SOAK_MINUTES || 60);
+
+// The desktop's plugin windows and its processes, as the main process counts them.
+const counted = (app) => app.evaluate(({ app: a }) => ({
+  windows: [...globalThis.desktop.desk.all].filter((w) => w.kind === 'plugin' && !w.win.isDestroyed() && w.view && !w.view.webContents.isDestroyed() && !w.view.webContents.isCrashed()).length,
+  processes: a.getAppMetrics().length,
+}));
 
 test('memory stays flat over the soak', async () => {
   test.skip(!process.env.SOAK, 'the soak runs on its schedule (SOAK=1)');
@@ -28,35 +37,39 @@ test('memory stays flat over the soak', async () => {
   for (const instance of listed) {
     await app.evaluate((_e, i) => globalThis.desktop.desk.bar().view.webContents.executeJavaScript(
       `document.querySelector('li[data-instance="${i}"] a.plugin-level').click()`), instance);
+    const area = await page(app, (u) => new URL(u).origin === A.address && new URL(u).pathname === `/plugins/${instance}`, `${instance}'s area page`);
+    await pluginPage(area, instance, A.address);
   }
-  await until('every window', async () => (await windows(app)).filter((w) => w.kind === 'plugin' && w.path).length === listed.length);
+  // The window never loaded again: the first plugin's page as its window shows it now, in a window of its own.
+  await app.evaluate(() => {
+    const { desk, openPlugin } = globalThis.desktop;
+    const first = [...desk.all].find((w) => w.kind === 'plugin');
+    openPlugin(first.deployment, first.currentPath()).leftAlone = true;
+  });
+  const hosts = () => app.context().pages().filter((p) => p.frames().some((f) => f !== p.mainFrame() && f.url().includes('.plugins.'))).length;
+  await until('every window on a plugin\'s page', () => hosts() === listed.length + 1);
+  const start = await counted(app);
 
-  const samples = [];
-  const start = Date.now();
-  let reloaded = 0;
-  while (Date.now() - start < MINUTES * 60_000) {
-    const minute = (Date.now() - start) / 60_000;
+  const samples = [], reloads = [];
+  const began = Date.now();
+  while (Date.now() - began < MINUTES * 60_000) {
+    const minute = (Date.now() - began) / 60_000;
     const kb = await app.evaluate(({ app: a }) => a.getAppMetrics().reduce((sum, p) => sum + p.memory.workingSetSize, 0));
-    samples.push({ minute: Number(minute.toFixed(2)), mb: Math.round(kb / 1024) });
-    if (Math.floor(minute / 10) > reloaded) {
-      reloaded = Math.floor(minute / 10);
-      await app.evaluate(() => { for (const w of globalThis.desktop.desk.all) if (w.kind === 'plugin') w.retry(); });
+    // On Linux, where the soak runs, Node's free memory is the kernel's MemAvailable. (macOS counts its file
+    // cache as used, so a busy Mac reads as short of memory and the run fails there, saying so.)
+    samples.push({ minute, mb: kb / 1024, free: os.freemem() / os.totalmem() });
+    if (Math.floor(minute / 10) > reloads.length) {
+      reloads.push(minute);
+      await app.evaluate(() => { for (const w of globalThis.desktop.desk.all) if (w.kind === 'plugin' && !w.leftAlone) w.retry(); });
     }
     await new Promise((r) => setTimeout(r, 30_000));
   }
-  fs.mkdirSync(path.join(REPO, 'test-results'), { recursive: true });
-  fs.writeFileSync(path.join(REPO, 'test-results', 'soak.json'), JSON.stringify({ minutes: MINUTES, windows: listed.length, samples }, null, 1));
+  const end = await counted(app);
   await app.close();
   await A.close();
   fs.rmSync(dir, { recursive: true, force: true });
 
-  const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
-  const baseline = mean(samples.filter((s) => s.minute >= 5 && s.minute < 10).map((s) => s.mb));
-  const lastTen = samples.filter((s) => s.minute >= MINUTES - 10).map((s) => s.mb);
-  const trend = samples.filter((s) => s.minute >= 10);
-  const mx = mean(trend.map((s) => s.minute)), my = mean(trend.map((s) => s.mb));
-  const slope = trend.reduce((a, s) => a + (s.minute - mx) * (s.mb - my), 0) / trend.reduce((a, s) => a + (s.minute - mx) ** 2, 0);
-  console.log(`soak: baseline ${baseline.toFixed(0)} MB, last ten minutes at most ${Math.max(...lastTen)} MB, trend ${slope.toFixed(3)} MB/min`);
-  expect(Math.max(...lastTen)).toBeLessThanOrEqual(baseline * 1.10);
-  expect(slope * 60).toBeLessThanOrEqual(baseline * 0.10);
+  const { ok, reason } = judge({ samples, reloads, start, end, minutes: MINUTES });
+  console.log(`soak: ${ok ? 'passed' : 'failed'}: ${reason}`);
+  if (!ok) throw new Error(`the soak failed: ${reason}`);
 });

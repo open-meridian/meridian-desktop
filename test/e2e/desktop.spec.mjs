@@ -3,7 +3,7 @@
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
-import { launch, profile, windows, page, strip, signIn, deploymentA, standIn, certificate, until } from './harness.mjs';
+import { launch, profile, windows, page, pluginPage, strip, signIn, deploymentA, standIn, certificate, until } from './harness.mjs';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -49,13 +49,7 @@ test('the bar shows the plugins home, and opens every plugin the person may open
     const area = await page(app, areaOf(instance), `${instance}'s area page`);
     // Top-level: the window's own page is the dashboard's area page; the plugin page is framed on its own host.
     const host = `${instance}.plugins.${new URL(A.address).hostname}`;
-    // Under Manage the area opens on the dashboard's own Summary, which frames nothing: the person picks one of
-    // the plugin's pages from the area's tabs, and the window shows it without leaving the area.
-    const shows = await until(`${instance}'s page, or a tab for one, in ${area.url()}`, async () => (
-      await area.$('iframe[data-plugin-frame]') ? 'a page' : await area.$('nav a[data-page]') ? 'a tab' : null));
-    if (shows === 'a tab') await area.click('nav a[data-page]');
-    const framed = await until(`${instance}'s page on its own host`, () => area.frames().find((f) => f !== area.mainFrame() && f.url() && new URL(f.url()).hostname === host))
-      .catch(async (late) => { throw new Error(`${late.message}; the window is at ${area.url()} with frames ${JSON.stringify(area.frames().map((f) => f.url()))}`); });
+    const framed = await pluginPage(area, instance, A.address);
     expect(areaOf(instance)(area.url())).toBe(true);
     expect(new URL(framed.url()).hostname).toBe(host);
     expect(new URL(view.url()).pathname).toBe('/');
