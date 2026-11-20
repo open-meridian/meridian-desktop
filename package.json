@@ -14,8 +14,8 @@
   },
   "scripts": {
     "start": "electron .",
-    "test": "node --test test/unit/",
-    "check": "node scripts/check-structure.mjs && node scripts/check-licences.mjs && node --test test/unit/",
+    "test": "node --test \"test/unit/*.test.mjs\"",
+    "check": "node scripts/check-structure.mjs && node scripts/check-licences.mjs && node --test \"test/unit/*.test.mjs\"",
     "check:electron": "node scripts/check-electron-support.mjs",
     "notices": "node scripts/notices.mjs",
     "test:browser": "playwright test --config test/browser/playwright.config.mjs",

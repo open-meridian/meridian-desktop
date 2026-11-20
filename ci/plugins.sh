@@ -25,5 +25,7 @@ for instance in "${INSTANCES[@]}"; do
   echo "plugins: waiting for ${instance}, at most 600s"
   kubectl -n meridian wait --for=condition=Available --timeout=600s "deployment/meridian-meridian-runtime-plugin-${instance}"
 done
+# Available is the workload's word; the dashboard's is its area showing the plugin's pages (ci/heard.mjs).
+node "$HERE/heard.mjs" "$RUN_DIR/person.json" "$DASHBOARD" "${INSTANCES[@]}"
 meridian plugin list
 (IFS=,; echo "${INSTANCES[*]}") >"$RUN_DIR/instances"

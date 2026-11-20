@@ -182,5 +182,14 @@ jobs:
         run: |
           test -s "${{ matrix.resources }}/notices/THIRD_PARTY_NOTICES.txt"
           test -s "${{ matrix.resources }}/LICENSE.meridian-desktop"
+          # Electron's licence and Chromium's notices, where the packager puts them: beside the binary on Linux
+          # and Windows, and inside the bundle on macOS, where the bundle is all a .dmg or .zip carries.
           ls dist
-          find dist -maxdepth 3 -name 'LICENSES.chromium.html' | grep -q . || { echo "Chromium's notices are not shipped" >&2; exit 1; }
+          case "$RUNNER_OS" in
+            macOS) set -- "dist/mac-arm64/Meridian Desktop.app/Contents/Resources" "dist/mac/Meridian Desktop.app/Contents/Resources" ;;
+            *) set -- "$(dirname "${{ matrix.resources }}")" ;;
+          esac
+          for shipped in "$@"; do
+            test -s "$shipped/LICENSES.chromium.html" || { echo "Chromium's notices are not shipped in $shipped" >&2; exit 1; }
+            test -s "$shipped/LICENSE.electron.txt" || { echo "Electron's licence is not shipped in $shipped" >&2; exit 1; }
+          done

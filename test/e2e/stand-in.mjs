@@ -32,12 +32,30 @@ export function standIn({ name, instances = ['alpha', 'beta'], person = { name: 
       sessions.add(key);
       return go('/', { 'set-cookie': `${cookieName}=${key}; Path=/; Max-Age=43200; HttpOnly; SameSite=Lax${tls ? '; Secure' : ''}` });
     }
+    // A framed page's way in (the dashboard's `/plugins/{instance}/enter`): on to the plugin's own host.
+    const enter = /^\/plugins\/([a-z0-9-]+)\/enter$/.exec(url.pathname);
+    if (enter) {
+      if (!signed) return go('/sign-in');
+      const to = url.searchParams.get('path') || '/';
+      if (!instances.includes(enter[1]) || !to.startsWith('/') || to.startsWith('//')) return { status: 404, headers: {}, body: 'not found' };
+      return go(`${tls ? 'https' : 'http'}://${enter[1]}.plugins.${req.headers.host}${to}`);
+    }
+    // The area, as the dashboard draws it under Manage (meridian-core crates/dashboard, area.rs): its own Summary
+    // first, drawn and framing nothing; the plugin's pages are the tabs after it, each framed on the plugin's host.
     const area = /^\/plugins\/([a-z0-9-]+)$/.exec(url.pathname);
     if (area) {
       if (!signed) return go('/sign-in');
-      if (!instances.includes(area[1])) return { ...page('No such plugin', `<h1>No such plugin</h1><p>No plugin ${area[1]} runs in this deployment.</p>`), status: 404 };
-      const host = `${area[1]}.plugins.${req.headers.host}`;
-      return page(area[1], `<h1>${area[1]}</h1><iframe src="${tls ? 'https' : 'http'}://${host}/" style="width:100%;height:80vh;border:0"></iframe>`,
+      const i = area[1];
+      if (!instances.includes(i)) return { ...page('No such plugin', `<h1>No such plugin</h1><p>No plugin ${i} runs in this deployment.</p>`), status: 404 };
+      const framed = url.searchParams.get('tab') === 'setup';
+      const here = ' class="here" aria-current="page"';
+      const nav = '<nav class="tabs view-tabs" aria-label="The plugin\'s pages">'
+        + `<a href="/plugins/${i}?level=admin&amp;tab=summary" data-tab="summary" data-drawn${framed ? '' : here}>Summary</a>`
+        + `<a href="/plugins/${i}?level=admin&amp;tab=setup" data-tab="setup" data-page="/setup"${framed ? here : ''}>Setup</a></nav>`;
+      const body = framed
+        ? `<iframe class="plugin-frame" id="plugin-page" data-page="/setup" data-plugin-frame src="/plugins/${i}/enter?path=%2Fsetup&amp;level=admin" style="width:100%;height:80vh;border:0"></iframe>`
+        : '<div class="area-drawn" id="plugin-page"><p>Summary</p></div>';
+      return page(i, `<div class="plugin-area" data-level="admin"><h1>${i}</h1>${nav}<div class="tab-body">${body}</div></div>`,
         { 'content-security-policy': "frame-ancestors 'self'" });
     }
     return { status: 404, headers: {}, body: 'not found' };
