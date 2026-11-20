@@ -12,6 +12,11 @@ meridian-desktop is AGPL-3.0-or-later, an extension of meridian-core. The design
 ## Code structure (the rules that apply here)
 Each is checked in CI and fails the build:
 - **S2 File size.** A hand-written file stays under 1,500 lines (`scripts/check-structure.mjs`).
+- **S4 Interims name their end.** A stop-gap carries a marker, `INTERIM(vNN): reason`, naming the version it ends
+  in and why it exists. The register `tools/interims.tsv` is generated from the markers. The repository's roadmap
+  version is in `tools/code-structure.toml`; a marker for that version or an earlier one fails the build, so the
+  stop-gap is removed before the version ships. Moving a marker to a later version needs the product owner's word
+  and a commit trailer saying so (`npm run check:interims`, `tools/code_structure.py`).
 - **S5 Pins are immutable.** Every dependency is an exact version, locked with its integrity, from the npm
   registry; every action a workflow uses is pinned to a full commit SHA (`scripts/check-structure.mjs`).
 - **S10 Licences by layer.** No AGPL code reaches an Apache-licensed library: this repository publishes no library.
@@ -19,7 +24,7 @@ Each is checked in CI and fails the build:
   (`scripts/check-licences.mjs`, `scripts/notices.mjs`, and ci's package job). The provenance file is kept current.
 
 ## Checks
-- `npm run check`: structure, licences, unit tests.
+- `npm run check`: structure, interims, licences, unit tests.
 - `npm run test:desktop`: the desktop driven by Playwright against stand-in deployments; ci also runs it against
   a real deployment from the released CLI and chart.
 - `npm run test:browser`: the browser check of the desktop's own pages at 375, 582 and 1280 wide.

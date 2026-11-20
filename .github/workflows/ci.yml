@@ -1,5 +1,5 @@
 # meridian-desktop's checks, job by job:
-# - checks: code structure (S2, S5), licences and notices (S10), unit tests, the Electron support gate;
+# - checks: code structure (S2, S4, S5), licences and notices (S10), unit tests, the Electron support gate;
 # - browser: the browser check of the pages the desktop draws, at 375, 582 and 1280 wide;
 # - desktop-stand-in: the Playwright-driven run of the desktop against stand-in deployments (fast);
 # - desktop-deployment: the same run against a real deployment, from the released CLI and chart on k3d;
@@ -43,6 +43,8 @@ jobs:
       - run: npm ci
       - name: Code structure (S2 file size, S5 pins)
         run: node scripts/check-structure.mjs
+      - name: Interims name their end (S4)
+        run: npm run check:interims
       - name: Licences by layer (S10)
         run: node scripts/check-licences.mjs
       - name: Unit tests
