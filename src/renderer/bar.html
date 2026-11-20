@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Meridian Desktop</title>
+<link rel="stylesheet" href="desk.css"></head>
+<body>
+<div class="row">
+  <span class="brand">Open Meridian</span>
+  <span class="dot" aria-hidden="true"></span>
+  <select id="deployments" aria-label="Deployment"></select>
+  <div class="controls">
+    <button type="button" data-open="add" title="Add a deployment">Add</button>
+    <button type="button" id="remove" title="Remove this deployment from the desktop">Remove</button>
+    <button type="button" data-act="minimize" title="Minimise" aria-label="Minimise">&#8211;</button>
+    <button type="button" data-act="close" title="Quit" aria-label="Quit">&#215;</button>
+  </div>
+</div>
+<div class="row wrap" role="group" aria-label="Setups">
+  <select id="setups" aria-label="Setup"></select>
+  <button type="button" id="launch" class="primary">Launch</button>
+  <button type="button" id="save" title="Save the windows open now under this setup's name">Save</button>
+  <button type="button" data-open="saveas">Save as</button>
+  <button type="button" id="default" aria-pressed="false" title="The setup the desktop can launch when it starts">Default</button>
+  <button type="button" id="export">Export</button>
+  <button type="button" id="import">Import</button>
+</div>
+<form class="panel" id="add" hidden>
+  <label>Address<input name="address" required placeholder="https://meridian.example.com" autocomplete="off" spellcheck="false"></label>
+  <label>Name<input name="name" maxlength="60" placeholder="Production"></label>
+  <label>Colour<input name="colour" type="color" value="#2f6fde"></label>
+  <div class="actions"><button type="submit" class="primary">Add the deployment</button><button type="button" data-close>Cancel</button></div>
+</form>
+<form class="panel" id="saveas" hidden>
+  <label>Setup name<input name="name" required maxlength="60" placeholder="Morning"></label>
+  <label class="check"><span><input type="checkbox" id="atstart"> Launch the default setup when the desktop starts</span></label>
+  <div class="actions"><button type="submit" class="primary">Save the setup</button><button type="button" data-close>Cancel</button></div>
+</form>
+<p class="refused" id="refused" role="status" hidden></p>
+<div id="notice"></div>
+<script src="notice.js"></script>
+<script src="bar.js"></script>
+</body>
+</html>
