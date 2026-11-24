@@ -6,3 +6,4 @@ build/notices/*
 !build/notices/README
 build/update-key/*
 !build/update-key/README
+__pycache__/
