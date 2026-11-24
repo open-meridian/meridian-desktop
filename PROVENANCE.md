@@ -27,3 +27,8 @@ OpenFin, FDC3-Sail, Dockview or any other desktop agent: L1 has no linking, and 
   written by `scripts/notices.mjs` and checked by `scripts/check-licences.mjs` (S10).
 - Build and test only, never shipped: `electron-builder` (MIT), `@electron/fuses` (MIT), `@playwright/test`
   (Apache-2.0).
+- No chart library: the desktop draws no chart of its own (a plugin's charts are in the plugin's own pages, under
+  that plugin's licences).
+- No Dockview package. Should one come in, only Dockview's MIT packages may; `dockview-enterprise`, which is
+  proprietary, never does, shipped or not. `scripts/check-licences.mjs` refuses it anywhere in the lock file or the
+  manifest (`scripts/forbidden-packages.mjs`).

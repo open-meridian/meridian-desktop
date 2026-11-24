@@ -5,9 +5,12 @@
 // - every package a release ships carries a licence an AGPL program may include, and its notice is shipped
 //   (scripts/notices.mjs writes them; ci checks the packaged app carries them, with Electron's own).
 // - the provenance file is here.
+// - `dockview-enterprise` (proprietary) is in no part of the tree, shipped or not, and any Dockview package is MIT
+//   (scripts/forbidden-packages.mjs).
 import fs from 'node:fs';
 import path from 'node:path';
 import { productionPackages, root } from './production-deps.mjs';
+import { forbidden } from './forbidden-packages.mjs';
 
 const ALLOWED = new Set(['MIT', 'ISC', 'BSD-2-Clause', 'BSD-3-Clause', 'Apache-2.0', '0BSD', 'BlueOak-1.0.0', 'CC0-1.0', 'Unlicense', 'Python-2.0']);
 const failures = [];
@@ -33,7 +36,9 @@ for (const file of [...sources(path.join(root, 'src')), ...sources(path.join(roo
   if (/SPDX-License-Identifier:\s*Apache/i.test(fs.readFileSync(file, 'utf8'))) failures.push(`${path.relative(root, file)} carries an Apache-2.0 header: our code is AGPL`);
 }
 
+failures.push(...forbidden(JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8')), pkg));
+
 const shipped = productionPackages();
 for (const p of shipped) if (!allowed(p.license)) failures.push(`${p.name}@${p.version} is licensed "${p.license}", which is not on the allowed list`);
 if (failures.length) { for (const f of failures) console.error(`check-licences: ${f}`); process.exit(1); }
-console.log(`check-licences: ${shipped.length} shipped packages, each under an allowed licence; AGPL, private, provenance and notice in place`);
+console.log(`check-licences: ${shipped.length} shipped packages, each under an allowed licence; no dockview-enterprise; AGPL, private, provenance and notice in place`);
