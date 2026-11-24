@@ -1,0 +1,31 @@
+# Temporary: reads which settings the released chart takes for a firm's own OIDC provider, to write the sign-in job.
+# Removed before this pull request is ready.
+name: chart-probe
+on: { pull_request: }
+permissions: { contents: read }
+env:
+  CHART_VERSION: 0.1.632
+  HELM_VERSION: v3.19.0
+  HELM_SHA256: a7f81ce08007091b86d8bd696eb4d86b8d0f2e1b9f6c714be62f82f96a594496
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: The chart's settings for a firm's provider
+        run: |
+          curl -fsSL -o /tmp/helm.tgz "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz"
+          echo "${HELM_SHA256}  /tmp/helm.tgz" | sha256sum -c -
+          tar -xzf /tmp/helm.tgz -C /tmp linux-amd64/helm
+          cd /tmp && /tmp/linux-amd64/helm pull oci://ghcr.io/open-meridian/charts/meridian-runtime --version "$CHART_VERSION" --untar
+          cd /tmp/meridian-runtime
+          ls -R templates | head -100
+          echo "=== values: dashboard / identity"
+          grep -n -i -E "oidc|issuer|groups|identity|zitadel|bundled|client|sign|ldap|local-account|dashboard" values.yaml | head -150
+          echo "=== templates mentioning oidc/issuer/addresses"
+          grep -rn -i -E "oidc|issuer|groups-claim|groupsClaim|client-id|clientId|client-secret|clientSecret|meridian-addresses|addresses" templates | head -200
+          echo "=== first-run job env"
+          grep -rln -i "first-run" templates
+          for f in $(grep -rl -i "first-run" templates); do echo "--- $f"; grep -n -i -E "secret|name:|value:|key:" "$f" | head -80; done
+          echo "=== dashboard deployment"
+          for f in $(grep -rl -i -E "component.*dashboard|dashboard" templates | head -5); do echo "--- $f"; sed -n 1,400p "$f" | grep -n -i -E "env|name:|secretKeyRef|key:|value|mount|configMap|oidc|issuer|ldap|zitadel" | head -150; done
