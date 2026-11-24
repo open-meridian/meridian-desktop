@@ -45,5 +45,6 @@ label { display: flex; flex-direction: column; gap: 2px; color: var(--ink-soft);
 .notice .actions, .panel .actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .panel { margin: 0 6px 6px; padding: 8px; border: 1px solid var(--line); background: var(--card); border-radius: 6px; display: grid; gap: 6px; -webkit-app-region: no-drag; }
 .refused { color: var(--danger); margin: 0; }
-.brand { font-weight: 700; white-space: nowrap; }
+/* The bar's name gives way first in a narrow window, so its controls stay in view. */
+.brand { font-weight: 700; white-space: nowrap; flex: 0 100 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 [hidden] { display: none !important; }
