@@ -15,6 +15,11 @@
 * { box-sizing: border-box; }
 body { display: flow-root; }
 html, body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+/* A strip is given the height it asks for, up to its window's. Where the person opens more than a small window
+   holds, the strip scrolls under its first row, which stays in view: nothing is cut off. */
+html { overflow-x: hidden; overflow-y: auto; scroll-padding-top: 36px; }
+body { overflow: clip; }
+body > .row:first-child { position: sticky; top: 0; z-index: 1; background: var(--page); }
 .row { display: flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 6px 0 10px; -webkit-app-region: drag; min-width: 0; }
 .row.wrap { flex-wrap: wrap; padding-top: 4px; padding-bottom: 4px; }
 .name { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1 1 auto; overflow: hidden; white-space: nowrap; }
@@ -31,8 +36,11 @@ button[aria-pressed="true"] { border-color: var(--accent); }
 select, input { background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; min-width: 0; max-width: 100%; }
 select { flex: 1 1 120px; }
 label { display: flex; flex-direction: column; gap: 2px; color: var(--ink-soft); font-size: 12px; min-width: 0; }
-.notice { margin: 0 6px 6px; padding: 8px 10px; border: 1px solid var(--warn-ink); background: var(--warn-wash); border-radius: 6px; -webkit-app-region: no-drag; }
-.notice p { margin: 0 0 6px; overflow-wrap: anywhere; }
+.notice { margin: 0 6px 6px; padding: 6px 8px; border: 1px solid var(--warn-ink); background: var(--warn-wash); border-radius: 6px; -webkit-app-region: no-drag; }
+.notice p { margin: 0 0 4px; overflow-wrap: anywhere; }
+.notice details { margin: 0 0 4px; }
+.notice summary { cursor: pointer; color: var(--ink-soft); }
+.notice details p { margin: 2px 0 0; }
 .notice code { font: 12px/1.3 ui-monospace, Menlo, Consolas, monospace; overflow-wrap: anywhere; }
 .notice .actions, .panel .actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .panel { margin: 0 6px 6px; padding: 8px; border: 1px solid var(--line); background: var(--card); border-radius: 6px; display: grid; gap: 6px; -webkit-app-region: no-drag; }

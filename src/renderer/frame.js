@@ -25,4 +25,7 @@ document.addEventListener('click', (e) => {
 });
 document.addEventListener('dblclick', (e) => { if (!e.target.closest('button')) window.desk.act('maximize'); });
 window.desk.onUpdate(draw);
+// The strip asks again whenever its own height changes: a window made narrower wraps its text, and a notice's
+// fingerprints open and close.
+new ResizeObserver(() => window.desk.act('height', document.body.scrollHeight)).observe(document.body);
 draw();
