@@ -1,5 +1,6 @@
 # meridian-desktop's checks, job by job:
-# - checks: code structure (S2, S4, S5), licences and notices (S10), unit tests, the Electron support gate;
+# - checks: code structure (S2, S4, S5), licences and notices (S10), names, unit tests, the Electron support
+#   gate;
 # - browser: the browser check of the pages the desktop draws, at 375, 582 and 1280 wide and at a window's
 #   minimum width;
 # - desktop-stand-in: the Playwright-driven run of the desktop against stand-in deployments (fast);
@@ -48,6 +49,8 @@ jobs:
         run: npm run check:interims
       - name: Licences by layer (S10)
         run: node scripts/check-licences.mjs
+      - name: Names, no persona and no upstream trademark as ours
+        run: node scripts/check-names.mjs
       - name: Unit tests
         run: npm test
       - name: Electron is a major Electron still supports

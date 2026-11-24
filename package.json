@@ -15,7 +15,7 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test \"test/unit/*.test.mjs\"",
-    "check": "node scripts/check-structure.mjs && npm run check:interims && node scripts/check-licences.mjs && node --test \"test/unit/*.test.mjs\"",
+    "check": "node scripts/check-structure.mjs && npm run check:interims && node scripts/check-licences.mjs && node scripts/check-names.mjs && node --test \"test/unit/*.test.mjs\"",
     "check:interims": "python3 tools/code_structure.py --self-test && python3 tools/code_structure.py interims",
     "check:electron": "node scripts/check-electron-support.mjs",
     "notices": "node scripts/notices.mjs",

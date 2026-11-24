@@ -26,7 +26,8 @@ Each is checked in CI and fails the build:
   file is kept current.
 
 ## Checks
-- `npm run check`: structure, interims, licences, unit tests.
+- `npm run check`: structure, interims, licences, names (no persona and no upstream trademark is published as
+  a name of ours: `scripts/check-names.mjs`), unit tests.
 - `npm run test:desktop`: the desktop driven by Playwright against stand-in deployments; ci also runs it against
   a real deployment from the released CLI and chart.
 - `npm run test:browser`: the browser check of the desktop's own pages at 375, 582 and 1280 wide, and at the
