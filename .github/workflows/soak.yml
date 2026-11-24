@@ -1,5 +1,12 @@
 # L1's condition that memory stays flat over a one-hour soak: the desktop against a real deployment (as ci's
-# desktop-deployment job brings one up), every plugin open, sampled every 30 seconds. Weekly, and on demand.
+# desktop-deployment job brings one up), headless under xvfb, every plugin the person may open in a window of its
+# own, sampled every 30 seconds. Weekly, and on demand; never on a pull request.
+#
+# Flat (test/e2e/soak-rule.mjs, tested in test/unit/soak-rule.test.mjs): the desktop's working set, summed over all
+# its processes, with the samples in the two minutes after each ten-minute reload left out. The baseline is the
+# mean of minutes 5 to 10. It fails when a sample in the last ten minutes is more than 10% above the baseline, when
+# the least-squares trend from minute 10, carried over an hour, adds more than 5% of the baseline, when a window or
+# a process was lost, or when the runner was short of memory (under 10% free) at any sample.
 # The run says whether it passed and why, and nothing measured: it prints no figure and keeps no file of them.
 name: soak
 
@@ -23,6 +30,8 @@ env:
   K3S_IMAGE: rancher/k3s:v1.36.5-k3s1
   K3D_VERSION: v5.9.0
   K3D_SHA256: 06d8f25bc3a971c4eb29e0ff08429b180402db0f4dec838c9eac427e296800a0
+  HELM_VERSION: v3.19.0
+  HELM_SHA256: a7f81ce08007091b86d8bd696eb4d86b8d0f2e1b9f6c714be62f82f96a594496
 
 jobs:
   soak:
@@ -41,7 +50,7 @@ jobs:
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           npx playwright install --with-deps chromium
           python -m pip install argon2-cffi==25.1.0
-      - name: The released CLI and k3d, each checked against its pinned checksum
+      - name: The released CLI, k3d and Helm, each checked against its pinned checksum
         run: |
           mkdir -p "$HOME/.local/bin" && echo "$HOME/.local/bin" >>"$GITHUB_PATH"
           curl -fsSL -o /tmp/meridian "https://github.com/open-meridian/meridian-cli/releases/download/${MERIDIAN_CLI_VERSION}/meridian-x86_64-unknown-linux-musl"
@@ -50,6 +59,13 @@ jobs:
           curl -fsSL -o /tmp/k3d "https://github.com/k3d-io/k3d/releases/download/${K3D_VERSION}/k3d-linux-amd64"
           echo "${K3D_SHA256}  /tmp/k3d" | sha256sum -c -
           install -m 0755 /tmp/k3d "$HOME/.local/bin/k3d"
+          # The CLI installs the chart with Helm: the same pinned Helm as ci's desktop-deployment job, not whichever
+          # one the runner's image carries.
+          curl -fsSL -o /tmp/helm.tgz "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz"
+          echo "${HELM_SHA256}  /tmp/helm.tgz" | sha256sum -c -
+          tar -xzf /tmp/helm.tgz -C /tmp linux-amd64/helm
+          install -m 0755 /tmp/linux-amd64/helm "$HOME/.local/bin/helm"
+          "$HOME/.local/bin/helm" version --short
       - name: A run directory only this job reads
         run: |
           run_dir="$RUNNER_TEMP/desktop"; mkdir -p "$run_dir/config" && chmod 700 "$run_dir"
@@ -61,3 +77,12 @@ jobs:
         run: |
           SOAK=1 DESKTOP_DEPLOYMENT=http://meridian.localhost DESKTOP_PERSON_FILE="$RUN_DIR/person.json" \
           DESKTOP_INSTANCES="$(cat "$RUN_DIR/instances")" xvfb-run -a npm run test:desktop -- soak.spec.mjs
+      - name: The soak ran, and was not skipped
+        run: |
+          # A skipped test passes in Playwright's eyes; the soak's job is to have soaked.
+          node -e '
+            const s = require("./test-results/desktop.json").stats;
+            if (s.expected !== 1 || s.skipped || s.unexpected || s.flaky) {
+              console.error("the soak did not run as one passing test"); process.exit(1);
+            }
+            console.log("the soak ran once and passed");'
