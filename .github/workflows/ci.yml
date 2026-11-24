@@ -1,6 +1,7 @@
 # meridian-desktop's checks, job by job:
 # - checks: code structure (S2, S4, S5), licences and notices (S10), unit tests, the Electron support gate;
-# - browser: the browser check of the pages the desktop draws, at 375, 582 and 1280 wide;
+# - browser: the browser check of the pages the desktop draws, at 375, 582 and 1280 wide and at a window's
+#   minimum width;
 # - desktop-stand-in: the Playwright-driven run of the desktop against stand-in deployments (fast);
 # - desktop-deployment: the same run against a real deployment, from the released CLI and chart on k3d;
 # - package: unsigned builds for Linux (AppImage), Windows and macOS (both architectures), with the fuses
@@ -61,7 +62,7 @@ jobs:
         with: { node-version: "${{ env.NODE_VERSION }}" }
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - name: The browser check at 375, 582 and 1280 wide
+      - name: The browser check at 375, 582 and 1280 wide, and at a window's minimum width
         run: npm run test:browser
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()

@@ -1,12 +1,18 @@
-// The browser check for the pages the desktop draws (its strips), at 375, 582 and 1280 wide: no horizontal
-// scroll, the page fits its own height, and a screenshot of each state is kept. The strips are loaded from the
-// source with a stand-in for the bridge, in each state they can be in.
+// The browser check for the pages the desktop draws (its strips), at 375, 582 and 1280 wide and at the narrowest a
+// desktop window may be made (its minWidth, read from src/main/windows.js): no horizontal scroll, the page fits its
+// own height, and a screenshot of each state is kept. The strips are loaded from the source with a stand-in for the
+// bridge, in each state they can be in.
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 
 const PAGES = path.resolve(import.meta.dirname, '..', '..', 'src', 'renderer');
 const SHOTS = path.resolve(import.meta.dirname, '..', '..', 'test-results', 'browser-shots');
+// Every desktop window, the bar's and each plugin's, is made with the same minimum size.
+const WINDOWS = fs.readFileSync(path.resolve(import.meta.dirname, '..', '..', 'src', 'main', 'windows.js'), 'utf8');
+const MIN_WIDTH = Number(/minWidth:\s*(\d+)/.exec(WINDOWS)?.[1]);
+if (!(MIN_WIDTH > 0)) throw new Error('the windows\' minWidth is not found in src/main/windows.js');
+const WIDTHS = [...new Set([MIN_WIDTH, 375, 582, 1280])];
 const deployment = { id: 'd1', name: 'Production with a long deployment name', colour: '#c2410c', address: 'https://meridian.example.com' };
 const fp = 'AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67:89';
 const bar = { deployments: [deployment, { id: 'd2', name: 'Local', colour: '#2f6fde', address: 'http://meridian.localhost' }], active: 'd1', setups: ['Morning', 'Close'], defaultSetup: 'Morning', launchAtStart: false };
@@ -20,7 +26,7 @@ const STATES = {
 };
 
 for (const [name, state] of Object.entries(STATES)) {
-  for (const width of [375, 582, 1280]) {
+  for (const width of WIDTHS) {
     test(`${name} at ${width}`, async ({ page }) => {
       let stripHeight = 0;
       await page.setViewportSize({ width, height: 800 });

@@ -27,4 +27,6 @@ Each is checked in CI and fails the build:
 - `npm run check`: structure, interims, licences, unit tests.
 - `npm run test:desktop`: the desktop driven by Playwright against stand-in deployments; ci also runs it against
   a real deployment from the released CLI and chart.
-- `npm run test:browser`: the browser check of the desktop's own pages at 375, 582 and 1280 wide.
+- `npm run test:browser`: the browser check of the desktop's own pages at 375, 582 and 1280 wide, and at the
+  narrowest a desktop window may be made. Their colours are the plugin UI kit's tokens, under the kit's names
+  (`test/unit/strip-tokens.test.mjs`).
