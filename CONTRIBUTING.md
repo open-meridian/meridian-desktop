@@ -21,10 +21,15 @@ Each is checked in CI and fails the build:
   registry; every action a workflow uses is pinned to a full commit SHA (`scripts/check-structure.mjs`).
 - **S10 Licences by layer.** No AGPL code reaches an Apache-licensed library: this repository publishes no library.
   Every shipped package carries an allowed licence, and its notices ship in every build
-  (`scripts/check-licences.mjs`, `scripts/notices.mjs`, and ci's package job). The provenance file is kept current.
+  (`scripts/check-licences.mjs`, `scripts/notices.mjs`, and ci's package job). `dockview-enterprise` never enters,
+  shipped or not, and a Dockview package would have to be MIT (`scripts/forbidden-packages.mjs`). The provenance
+  file is kept current.
 
 ## Checks
-- `npm run check`: structure, interims, licences, unit tests.
+- `npm run check`: structure, interims, licences, names (no persona and no upstream trademark is published as
+  a name of ours: `scripts/check-names.mjs`), unit tests.
 - `npm run test:desktop`: the desktop driven by Playwright against stand-in deployments; ci also runs it against
   a real deployment from the released CLI and chart.
-- `npm run test:browser`: the browser check of the desktop's own pages at 375, 582 and 1280 wide.
+- `npm run test:browser`: the browser check of the desktop's own pages at 375, 582 and 1280 wide, and at the
+  narrowest a desktop window may be made. Their colours are the plugin UI kit's tokens, under the kit's names
+  (`test/unit/strip-tokens.test.mjs`).
