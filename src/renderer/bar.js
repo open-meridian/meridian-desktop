@@ -69,4 +69,6 @@ $('saveas').addEventListener('submit', async (e) => {
   draw();
 });
 window.desk.onUpdate(draw);
+// Asked again whenever the bar's own height changes: a narrower window wraps it, and a panel opens or closes.
+new ResizeObserver(fit).observe(document.body);
 draw();

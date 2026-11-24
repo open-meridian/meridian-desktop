@@ -215,7 +215,8 @@ test('a self-signed certificate is pinned when accepted, and a changed one is re
   const bar = await strip(app);
   await bar.fill('#add input[name=address]', pinned.address);
   await bar.click('#add button[type=submit]');
-  await bar.waitForSelector('[data-notice="certificate"] code[data-fingerprint="seen"]');
+  // The bar is narrow, so its fingerprints are behind a click: present, and read from the notice.
+  await bar.waitForSelector('[data-notice="certificate"] code[data-fingerprint="seen"]', { state: 'attached' });
   const first = await bar.textContent('code[data-fingerprint="seen"]');
   await bar.click('button[data-act="acceptCertificate"]');
   const view = await page(app, (u) => new URL(u).origin === pinned.address, 'the pinned deployment');
@@ -231,7 +232,7 @@ test('a self-signed certificate is pinned when accepted, and a changed one is re
     s.listen(port, '127.0.0.1', () => resolve({ close: () => new Promise((r) => { s.closeAllConnections(); s.close(r); }) }));
   });
   await view.evaluate(() => { location.reload(); }).catch(() => {});
-  await bar.waitForSelector('code[data-fingerprint="pinned"]');
+  await bar.waitForSelector('code[data-fingerprint="pinned"]', { state: 'attached' });
   expect(await bar.textContent('code[data-fingerprint="pinned"]')).toBe(first);
   expect(await bar.textContent('code[data-fingerprint="seen"]')).not.toBe(first);
   expect(await view.locator('#changed').count()).toBe(0);

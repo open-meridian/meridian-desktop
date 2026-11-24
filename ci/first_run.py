@@ -13,7 +13,14 @@ Secret keys -- and restarts what reads them:
 The password is drawn here, written to a file only its owner reads, and never
 printed. That account is the one person the run signs in as.
 
-Usage: python3 first_run.py RUN_DIR
+With --provider, the branch where people sign in through the firm's own
+OpenID Connect provider (ci/provider.sh) instead: the addresses Secret names
+the dashboard's address, the provider's issuer and the directory group whose
+members administer the deployment, and the dashboard's OIDC Secret its client,
+the client's secret (read from RUN_DIR/client-secret, never printed) and the
+claim that carries groups. No account is held by the deployment.
+
+Usage: python3 first_run.py RUN_DIR [--provider]
 Reads KUBECONFIG. Standard library, plus argon2-cffi for the hash.
 """
 
@@ -32,6 +39,9 @@ RELEASE = "meridian"
 FULL = f"{RELEASE}-meridian-runtime"
 ADDRESS = "http://meridian.localhost"
 PERSON = "pat"
+# The firm's provider, as ci/provider.sh sets it up.
+CLIENT_ID = "meridian-dashboard"
+ADMIN_GROUP = "meridian-admins"
 
 
 def kubectl(*args, stdin=None, check=True, quiet=False):
@@ -78,6 +88,9 @@ def replace_secret(name, data):
 
 def main():
     run_dir = sys.argv[1]
+    provider = sys.argv[2:] == ["--provider"]
+    if sys.argv[2:] and not provider:
+        sys.exit("usage: first_run.py RUN_DIR [--provider]")
 
     # The database the chart brings starts with no member until first run.
     wait("the database StatefulSet", lambda: kubectl(
@@ -104,21 +117,39 @@ def main():
     })
     del serving, migrating, passwords
 
-    # The one person: an account this deployment holds, and its administrator.
-    password = secrets.token_urlsafe(24)
-    hashed = PasswordHasher(time_cost=2, memory_cost=19456, parallelism=1).hash(password)
-    replace_secret("meridian-addresses", {
-        "dashboard-url": ADDRESS,
-        "local-accounts": "on",
-        "local-account-name": PERSON,
-        "administrator-login": f"local|{PERSON}",
-        "administrator-display-name": "Pat Example",
-        "administrator-password-hash": hashed,
-    })
-    person = os.path.join(run_dir, "person.json")
-    with open(os.open(person, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w") as kept:
-        json.dump({"name": PERSON, "password": password}, kept)
-    del password
+    if provider:
+        # The firm's own provider: who administers is a directory group, named before anybody has signed in.
+        with open(os.path.join(run_dir, "issuer")) as kept:
+            issuer = kept.read().strip()
+        with open(os.path.join(run_dir, "client-secret")) as kept:
+            client_secret = kept.read().strip()
+        replace_secret("meridian-addresses", {
+            "dashboard-url": ADDRESS,
+            "issuer": issuer,
+            "administrator-directory-group": ADMIN_GROUP,
+        })
+        replace_secret(f"{FULL}-dashboard-oidc", {
+            "client-id": CLIENT_ID,
+            "client-secret": client_secret,
+            "groups-claim": "groups",
+        })
+        del client_secret
+    else:
+        # The one person: an account this deployment holds, and its administrator.
+        password = secrets.token_urlsafe(24)
+        hashed = PasswordHasher(time_cost=2, memory_cost=19456, parallelism=1).hash(password)
+        replace_secret("meridian-addresses", {
+            "dashboard-url": ADDRESS,
+            "local-accounts": "on",
+            "local-account-name": PERSON,
+            "administrator-login": f"local|{PERSON}",
+            "administrator-display-name": "Pat Example",
+            "administrator-password-hash": hashed,
+        })
+        person = os.path.join(run_dir, "person.json")
+        with open(os.open(person, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w") as kept:
+            json.dump({"name": PERSON, "password": password}, kept)
+        del password
 
     # What the first-run Job does once its Secrets are written: restart what
     # reads them at start, finish, and give up its own rights.
@@ -142,7 +173,10 @@ def main():
         return names and kubectl("wait", "--for=condition=Available", "--timeout=5s", *names,
                                  check=False).returncode == 0
     wait("every component", every_deployment_available, seconds=900)
-    print("first run: done; one person, signed in as", PERSON, flush=True)
+    if provider:
+        print("first run: done; people sign in through", issuer, "and", ADMIN_GROUP, "administers", flush=True)
+    else:
+        print("first run: done; one person, signed in as", PERSON, flush=True)
 
 
 if __name__ == "__main__":
